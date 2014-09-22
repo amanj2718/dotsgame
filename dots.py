@@ -30,8 +30,6 @@ class Dot(pygame.sprite.Sprite):
 	def __init__(self, x, y):
 		pygame.sprite.Sprite.__init__(self)
 		self.image = pygame.image.load("dot.png")
-		# self.image = pygame.Surface((5, 5))
-		# self.image.fill(RED)
 		self.rect = self.image.get_rect()
 		self.rect.topleft = (x - self.rect.width/2, y - self.rect.height/2)
 		self.x = x
@@ -39,7 +37,8 @@ class Dot(pygame.sprite.Sprite):
 		self.pos = (self.x, self.y)
 
 	def is_adjacent(self, other):
-		if (abs(self.x - other.x) == side or abs(self.y - other.y) == side) and not (abs(self.x - other.x) == side and abs(self.y - other.y) == side):
+		if (abs(self.x - other.x) == side or abs(self.y - other.y) == side) and not \
+			(abs(self.x - other.x) == side and abs(self.y - other.y) == side):
 			return True
 		else:
 			return False
@@ -85,9 +84,9 @@ class Square():
 
 	def check_occupied(self):
 		if self.right_edge == True and self.left_edge == True and self.top_edge == True and self.bottom_edge == True:
-			if curr_state == states['p1sd'] and self.occupied == False:
+			if curr_state == states['p1sd']:
 				self.occupied = 1
-			if curr_state == states['p2sd'] and self.occupied == False:
+			if curr_state == states['p2sd']:
 				self.occupied = 2
 		else:
 			self.occupied = False
@@ -116,7 +115,6 @@ rects = []
 for i in range(side, board.width, side):
 	for j in range(side, board.height, side):
 		rects.append(Square(i, j, side, side))
-unoccupied_rects = rects
 
 dots = pygame.sprite.Group()
 
@@ -141,6 +139,28 @@ def clear_turn_stack():
 	dots.remove(initial)
 	dots.remove(terminal)
 
+def render_ui():
+	if curr_state == states['p1fd'] or curr_state == states['p1sd']:
+		status = font.render("Player 1\'s turn", 0, RED)
+		pygame.Surface.blit(window, status, Rect(200, 25, status.get_width(), status.get_height()))
+	
+	elif curr_state == states['p2fd'] or curr_state == states['p2sd']:
+		status = font.render("Player 2\'s turn", 0, RED)
+		pygame.Surface.blit(window, status, Rect(200, 25, status.get_width(), status.get_height()))
+	
+	p1_text = font.render(str(player1_points), 0, GREEN)
+	pygame.Surface.blit(window, p1_text, Rect(30, 30, p1_text.get_width(), p1_text.get_height()))
+	p2_text = font.render(str(player2_points), 0, BLUE)
+	pygame.Surface.blit(window, p2_text, Rect(530, 30, p2_text.get_width(), p2_text.get_height()))
+
+def draw_background():
+	window.fill(WHITE)
+	top_border = [[side*i, side] for i in range(1, board.width/side + 1)]
+	bottom_border = [[side*i, board.height] for i in range(1, board.width/side + 1)]
+	for top, bottom in zip(top_border, bottom_border):
+		pygame.draw.line(window, BLACK, top, bottom, 2)
+		pygame.draw.line(window, BLACK, list(reversed(top)), list(reversed(bottom)), 2)
+
 # game loop
 while True:
 	for event in pygame.event.get():
@@ -150,22 +170,18 @@ while True:
 		if event.type == MOUSEBUTTONDOWN and event.button == 1:
 			snapped = is_clickable(event.pos[0], event.pos[1])
 			if snapped is not (-50, -50):
-				# handle state
+				# gameplay logic
 				if curr_state == states['p1fd']:
 					d = Dot(snapped[0], snapped[1])
 					dots.add(d)
 					turn_stack.append(d)
 					curr_state = states['p1sd']
-					logstr = "Player 1 first dot -- ({0},{1})\n".format(snapped[0], snapped[1])
-					game_log.append(logstr)
 
 				elif curr_state == states['p2fd']:
 					d = Dot(snapped[0], snapped[1])
 					dots.add(d)
 					turn_stack.append(d)
 					curr_state = states['p2sd']
-					logstr = "Player 2 first dot -- ({0}, {1})\n".format(snapped[0], snapped[1])
-					game_log.append(logstr)
 
 				elif curr_state == states['p1sd']:
 					d = Dot(snapped[0], snapped[1])
@@ -174,18 +190,10 @@ while True:
 						turn_stack.append(d)
 						# draw a line if they are adjacent
 						if turn_stack[0].is_adjacent(turn_stack[1]):
-							logstr = "Player 1 second dot -- ({0}, {1})\n".format(snapped[0], snapped[1])
-							game_log.append(logstr)
-
 							result_list = map(lambda r: r.update(turn_stack), rects)
 							if any(result_list):
 								player1_points += result_list.count(1)
 								curr_state = states['p1fd']
-								# for r in rects:
-								# 	result = r.update(turn_stack)
-								# 	if result == 1:
-								# 		curr_state = states['p1fd']
-								# 		player1_points += 1
 							else:
 								curr_state = states['p2fd']
 						# if dots are not adjacent
@@ -200,20 +208,10 @@ while True:
 						dots.add(d)
 						turn_stack.append(d)
 						if turn_stack[0].is_adjacent(turn_stack[1]):
-							logstr = "Player 2 second dot -- ({0}, {1})\n".format(snapped[0], snapped[1])
-							game_log.append(logstr)
-
-							print "".join(game_log)
-							game_log = []
-
 							result_list = map(lambda r: r.update(turn_stack), rects)
 							if any(result_list):
 								player2_points += result_list.count(2)
 								curr_state = states['p2fd']
-									# result = r.update(turn_stack)
-									# if result == 2:
-									# 	curr_state = states['p2fd']
-									# 	player2_points += 1
 							else:
 								curr_state = states['p1fd']
 						else:
@@ -221,24 +219,13 @@ while True:
 							curr_state = states['p2fd']
 						turn_stack = []
 	# background
-	window.fill(WHITE)
-	top_border = [[side*i, side] for i in range(1, board.width/side + 1)]
-	bottom_border = [[side*i, board.height] for i in range(1, board.width/side + 1)]
-	for top, bottom in zip(top_border, bottom_border):
-		pygame.draw.line(window, BLACK, top, bottom, 2)
-		pygame.draw.line(window, BLACK, list(reversed(top)), list(reversed(bottom)), 2)
+	draw_background()
 
 	for rect in rects:
 		rect.draw(window)
+
 	dots.draw(window)
-	if curr_state == states['p1fd'] or curr_state == states['p1sd']:
-		status = font.render("Player 1\'s turn", 0, RED)
-		pygame.Surface.blit(window, status, Rect(200, 25, status.get_width(), status.get_height()))
-	elif curr_state == states['p2fd'] or curr_state == states['p2sd']:
-		status = font.render("Player 2\'s turn", 0, RED)
-		pygame.Surface.blit(window, status, Rect(200, 25, status.get_width(), status.get_height()))
-	p1_text = font.render(str(player1_points), 0, GREEN)
-	pygame.Surface.blit(window, p1_text, Rect(30, 30, p1_text.get_width(), p1_text.get_height()))
-	p2_text = font.render(str(player2_points), 0, BLUE)
-	pygame.Surface.blit(window, p2_text, Rect(530, 30, p2_text.get_width(), p2_text.get_height()))
+
+	render_ui()
+
 	pygame.display.flip()
