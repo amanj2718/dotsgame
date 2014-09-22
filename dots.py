@@ -2,7 +2,7 @@ import pygame, sys
 from pygame.locals import *
 
 """
-TODO: Add a game log.
+TODO: Fix the game log.
 """
 
 pygame.init()
@@ -24,7 +24,7 @@ player2_points = 0
 turn_stack = []
 states = {'p1fd':0, 'p1sd':1, 'p2fd':2, 'p2sd':3}
 curr_state = states['p1fd']
-game_log = ""
+game_log = ["Player 1 --\n"]
 
 class Dot(pygame.sprite.Sprite):
 	def __init__(self, x, y):
@@ -58,6 +58,9 @@ class Square():
 		Takes turn stack, flip corresponding edge flag to true and check if all
 		edges are occupied. Returns true if occupied.
 		"""
+		# the following two lines are a hack so that one can't overwrite squares
+		if self.occupied == 1 or self.occupied == 2:
+			return False
 		if (turn_stack[0].pos == self.rect.topleft and turn_stack[1].pos == self.rect.topright) or \
 			(turn_stack[1].pos == self.rect.topleft and turn_stack[0].pos == self.rect.topright):
 				self.top_edge = True
@@ -82,9 +85,9 @@ class Square():
 
 	def check_occupied(self):
 		if self.right_edge == True and self.left_edge == True and self.top_edge == True and self.bottom_edge == True:
-			if curr_state == states['p1sd']:
+			if curr_state == states['p1sd'] and self.occupied == False:
 				self.occupied = 1
-			if curr_state == states['p2sd']:
+			if curr_state == states['p2sd'] and self.occupied == False:
 				self.occupied = 2
 		else:
 			self.occupied = False
@@ -113,6 +116,7 @@ rects = []
 for i in range(side, board.width, side):
 	for j in range(side, board.height, side):
 		rects.append(Square(i, j, side, side))
+unoccupied_rects = rects
 
 dots = pygame.sprite.Group()
 
@@ -152,12 +156,16 @@ while True:
 					dots.add(d)
 					turn_stack.append(d)
 					curr_state = states['p1sd']
+					logstr = "Player 1 first dot -- ({0},{1})\n".format(snapped[0], snapped[1])
+					game_log.append(logstr)
 
 				elif curr_state == states['p2fd']:
 					d = Dot(snapped[0], snapped[1])
 					dots.add(d)
 					turn_stack.append(d)
 					curr_state = states['p2sd']
+					logstr = "Player 2 first dot -- ({0}, {1})\n".format(snapped[0], snapped[1])
+					game_log.append(logstr)
 
 				elif curr_state == states['p1sd']:
 					d = Dot(snapped[0], snapped[1])
@@ -166,13 +174,18 @@ while True:
 						turn_stack.append(d)
 						# draw a line if they are adjacent
 						if turn_stack[0].is_adjacent(turn_stack[1]):
+							logstr = "Player 1 second dot -- ({0}, {1})\n".format(snapped[0], snapped[1])
+							game_log.append(logstr)
+
 							result_list = map(lambda r: r.update(turn_stack), rects)
 							if any(result_list):
-								for r in rects:
-									result = r.update(turn_stack)
-									if result == 1:
-										curr_state = states['p1fd']
-										player1_points += 1
+								player1_points += result_list.count(1)
+								curr_state = states['p1fd']
+								# for r in rects:
+								# 	result = r.update(turn_stack)
+								# 	if result == 1:
+								# 		curr_state = states['p1fd']
+								# 		player1_points += 1
 							else:
 								curr_state = states['p2fd']
 						# if dots are not adjacent
@@ -187,17 +200,24 @@ while True:
 						dots.add(d)
 						turn_stack.append(d)
 						if turn_stack[0].is_adjacent(turn_stack[1]):
+							logstr = "Player 2 second dot -- ({0}, {1})\n".format(snapped[0], snapped[1])
+							game_log.append(logstr)
+
+							print "".join(game_log)
+							game_log = []
+
 							result_list = map(lambda r: r.update(turn_stack), rects)
 							if any(result_list):
-								for r in rects:
-									result = r.update(turn_stack)
-									if result == 2:
-										curr_state = states['p2fd']
-										player2_points += 1
+								player2_points += result_list.count(2)
+								curr_state = states['p2fd']
+									# result = r.update(turn_stack)
+									# if result == 2:
+									# 	curr_state = states['p2fd']
+									# 	player2_points += 1
 							else:
 								curr_state = states['p1fd']
 						else:
-							clear_turn_stack
+							clear_turn_stack()
 							curr_state = states['p2fd']
 						turn_stack = []
 	# background
