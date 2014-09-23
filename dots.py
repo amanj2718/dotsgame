@@ -229,3 +229,20 @@ while True:
 	render_ui()
 
 	pygame.display.flip()
+	# game over condition
+	lst = [rect.occupied for rect in rects]
+	if all(lst):
+		while True:
+			for event in pygame.event.get():
+				if (event.type == KEYDOWN and event.key == K_ESCAPE) or event.type == pygame.QUIT:
+					sys.exit()
+			window.fill(WHITE, Rect(0, 0, 550, 43))
+			if lst.count(1) > lst.count(2):
+				winner = "Player 1"
+			elif lst.count(2) > lst.count(1):
+				winner = "Player 2"
+			else:
+				winner = "Both lost."
+			over_text = font.render(winner+" won!", 0, RED)
+			pygame.Surface.blit(window, over_text, Rect(200, 25, over_text.get_width(), over_text.get_height()))
+			pygame.display.flip()
