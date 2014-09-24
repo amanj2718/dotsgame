@@ -1,5 +1,6 @@
 import pygame, sys
 from pygame.locals import *
+from copy import deepcopy
 
 """
 TODO: Fix the game log.
@@ -161,6 +162,94 @@ def draw_background():
 		pygame.draw.line(window, BLACK, top, bottom, 2)
 		pygame.draw.line(window, BLACK, list(reversed(top)), list(reversed(bottom)), 2)
 
+def get_filled_edges(rect):
+	edges = [rect.left_edge, rect.top_edge, rect.right_edge, rect.bottom_edge]
+	return edges.count(True)
+
+def is_feasible(past_state, future_state):
+	"""
+	Return weight of decision based on a definite scale.
+	Calculates all the squares that can be possibly occupied because of a chain-reaction.
+	"""
+	pass
+
+def apply_move(move):
+	"""
+	Takes a move and returns a list of future_state of rects.
+	"""
+	rects_copy = deepcopy(rects)
+	rect_index = move[0]
+	rect_edge = move[1]
+	if rect_edge == 'l':
+		rects_copy[rect_index].left_edge = True
+	elif rect_edge == 'r':
+		rects_copy[rect_index].right_edge = True
+	elif rect_edge == 't':
+		rects_copy[rect_index].top_edge = True
+	elif rect_edge == 'b':
+		rects_copy[rect_index].bottom_edge = True
+	return map(get_filled_edges, rects_copy)
+
+def one_filled_edge(index):
+	rect = rects[index]
+	base_str = ""
+	if rect.left_edge == True:
+		base_str = "rtb"
+	elif rect.right_edge == True:
+		base_str = "ltb"
+	elif rect.top_edge == True:
+		base_str = "lrb"
+	elif rect.bottom_edge == True:
+		base_str = "ltr"
+	return [(index, i) for i in base_str]
+
+def two_filled_edge(index):
+	rect = rects[index]
+	base_str = ""
+	if rect.left_edge == False:
+		base_str += 'l'
+	if rect.right_edge == False:
+		base_str += 'r'
+	if rect.top_edge == False:
+		base_str += 't'
+	if rect.bottom_edge == False:
+		base_str += 'b'
+	return [(index, i) for i in base_str]
+
+def three_filled_edge(index):
+	rect = rects[index]
+	if rect.left_edge == False:
+		return [(index, 'l')]
+	elif rect.right_edge == False:
+		return [(index, 'r')]
+	elif rect.top_edge == False:
+		return [(index, 't')]
+	elif rect.bottom_edge == False:
+		return [(index, 'b')]
+
+def ai_move():
+	"""
+	Returns a tuple (index_in_rects, edge_code).
+	edge_codes: left_edge -- 'l', top_edge -- 't', right_edge -- 'r', bottom_edge -- 'b'
+	"""
+	initial_state = map(get_filled_edges, rects)
+	possible_moves = []
+	for index, filled_edges in enumerate(initial_state):
+		if filled_edges == 0:
+			possible_moves.extend([(index, i) for i in 'ltrb'])
+		elif filled_edges == 1:
+			possible_moves.extend(one_filled_edge(index))
+		elif filled_edges == 2:
+			possible_moves.extend(two_filled_edge(index))
+		elif filled_edges == 3:
+			possible_moves.extend(three_filled_edge(index))
+	print possible_moves
+	possible_decisions = []
+	for move in possible_moves:
+		final_state = apply_move(move)
+		possible_decisions.append(is_feasible(initial_state, final_state))
+	return possible_moves[possible_decisions.index(max(possible_decisions))]
+
 # game loop
 while True:
 	for event in pygame.event.get():
@@ -178,6 +267,7 @@ while True:
 					curr_state = states['p1sd']
 
 				elif curr_state == states['p2fd']:
+					ai_move()
 					d = Dot(snapped[0], snapped[1])
 					dots.add(d)
 					turn_stack.append(d)
@@ -242,7 +332,7 @@ while True:
 			elif lst.count(2) > lst.count(1):
 				winner = "Player 2"
 			else:
-				winner = "Both lost."
+				winner = "Both "
 			over_text = font.render(winner+" won!", 0, RED)
 			pygame.Surface.blit(window, over_text, Rect(200, 25, over_text.get_width(), over_text.get_height()))
 			pygame.display.flip()
