@@ -60,25 +60,25 @@ class Square():
 		edges are occupied. Returns true if occupied.
 		"""
 		# the following two lines are a hack so that one can't overwrite squares
-		if self.occupied == 1 or self.occupied == 2:
+		if self.occupied == 1 or self.occupied == 2 or self.occupied == 3:
 			return False
-		if (turn_stack[0].pos == self.rect.topleft and turn_stack[1].pos == self.rect.topright) or \
-			(turn_stack[1].pos == self.rect.topleft and turn_stack[0].pos == self.rect.topright):
+		if (stack[0].pos == self.rect.topleft and stack[1].pos == self.rect.topright) or \
+		   (stack[1].pos == self.rect.topleft and stack[0].pos == self.rect.topright):
 				self.top_edge = True
 				self.check_occupied()
 				return self.occupied
-		if (turn_stack[0].pos == self.rect.topright and turn_stack[1].pos == self.rect.bottomright) or \
-			(turn_stack[1].pos == self.rect.topright and turn_stack[0].pos == self.rect.bottomright):
+		if (stack[0].pos == self.rect.topright and stack[1].pos == self.rect.bottomright) or \
+		   (stack[1].pos == self.rect.topright and stack[0].pos == self.rect.bottomright):
 			self.right_edge = True
 			self.check_occupied()
 			return self.occupied
-		if (turn_stack[0].pos == self.rect.bottomleft and turn_stack[1].pos == self.rect.bottomright) or \
-			(turn_stack[1].pos == self.rect.bottomleft and turn_stack[0].pos == self.rect.bottomright):
+		if (stack[0].pos == self.rect.bottomleft and stack[1].pos == self.rect.bottomright) or \
+		   (stack[1].pos == self.rect.bottomleft and stack[0].pos == self.rect.bottomright):
 			self.bottom_edge = True
 			self.check_occupied()
 			return self.occupied
-		if (turn_stack[0].pos == self.rect.topleft and turn_stack[1].pos == self.rect.bottomleft) or \
-			(turn_stack[1].pos == self.rect.topleft and turn_stack[0].pos == self.rect.bottomleft):
+		if (stack[0].pos == self.rect.topleft and stack[1].pos == self.rect.bottomleft) or \
+		   (stack[1].pos == self.rect.topleft and stack[0].pos == self.rect.bottomleft):
 			self.left_edge = True
 			self.check_occupied()
 			return self.occupied
@@ -118,19 +118,27 @@ class Square():
 								 self.rect.width - 3, self.rect.height - 3)
 			pygame.Surface.blit(screen, surf, adjusted_rect)
 
-	def draw_ai_move(self, edge):
-		if edge == 'l':
-			self.left_edge = True
-			self.check_occupied()
-		elif edge == 'r':
-			self.right_edge = True
-			self.check_occupied()
-		elif edge == 'b':
-			self.bottom_edge = True
-			self.check_occupied()
-		elif edge == 't':
-			self.top_edge = True
-			self.check_occupied()
+	# def draw_ai_move(self, edge):
+	# 	if edge == 'l':
+	# 		self.left_edge = True
+	# 		dots.add(Dot(self.rect.left, self.rect.top))
+	# 		dots.add(Dot(self.rect.left, self.rect.bottom))
+	# 		self.check_occupied()
+	# 	elif edge == 'r':
+	# 		self.right_edge = True
+	# 		dots.add(Dot(self.rect.right, self.rect.top))
+	# 		dots.add(Dot(self.rect.right, self.rect.bottom))
+	# 		self.check_occupied()
+	# 	elif edge == 'b':
+	# 		self.bottom_edge = True
+	# 		dots.add(Dot(self.rect.left, self.rect.bottom))
+	# 		dots.add(Dot(self.rect.right, self.rect.bottom))
+	# 		self.check_occupied()
+	# 	elif edge == 't':
+	# 		self.top_edge = True
+	# 		dots.add(Dot(self.rect.left, self.rect.top))
+	# 		dots.add(Dot(self.rect.right, self.rect.top))
+	# 		self.check_occupied()
 
 rects = []
 for i in range(side, board.width, side):
@@ -289,6 +297,28 @@ def ai_move():
 	print possible_moves[possible_decisions.index(max(possible_decisions))]
 	return possible_moves[possible_decisions.index(max(possible_decisions))]
 
+def convert_to_stack(move):
+	stack = []
+	edge = move[1]
+	r = rects[move[0]].rect
+	if edge == 'l':
+		d1 = Dot(r.left, r.top)
+		d2 = Dot(r.left, r.bottom)
+	elif edge == 'r':
+		d1 = Dot(r.right, r.top)
+		d2 = Dot(r.right, r.bottom)
+	elif edge == 'b':
+		d1 = Dot(r.right, r.bottom)
+		d2 = Dot(r.left, r.bottom)
+	elif edge == 't':
+		d1 = Dot(r.right, r.top)
+		d2 = Dot(r.left, r.top)
+	dots.add(d1)
+	dots.add(d2)
+	stack.append(d1)
+	stack.append(d2)
+	return stack
+
 def set_game_mode():
 	global MODE
 	ai_text = font.render("AI MODE", 0, RED)
@@ -375,8 +405,12 @@ while True:
 
 	if MODE == 'AI_MODE' and curr_state == STATES['p2fd']:
 		move = ai_move()
-		rects[move[0]].draw_ai_move(move[1])
-		curr_state = STATES['p1fd']
+		result_list = map(lambda r: r.update(convert_to_stack(move)), rects)
+		if any(result_list):
+			player2_points += result_list.count(3)
+			curr_state = STATES['p2fd']
+		else:
+			curr_state = STATES['p1fd']
 
 	# background
 	draw_background()
@@ -398,9 +432,9 @@ while True:
 				or event.type == pygame.QUIT:
 					sys.exit()
 			window.fill(WHITE, Rect(0, 0, 550, 43))
-			if lst.count(1) > lst.count(2):
+			if player1_points > player2_points:
 				winner = "Player 1"
-			elif lst.count(2) > lst.count(1):
+			elif player2_points > player1_points:
 				winner = "Player 2"
 			else:
 				winner = "Both "
