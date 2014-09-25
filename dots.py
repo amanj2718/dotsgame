@@ -1,16 +1,14 @@
 import pygame, sys
 from pygame.locals import *
 from copy import deepcopy
+from random import choice
 
-"""
-TODO: Fix the game log.
-"""
 
 pygame.init()
 
 side = 50
 dimensions = [550, 550]
-board = Rect(side, side, 5*side, 5*side)
+board = Rect(side, side, 3*side, 3*side)
 
 window = pygame.display.set_mode(dimensions)
 
@@ -118,28 +116,6 @@ class Square():
 								 self.rect.width - 3, self.rect.height - 3)
 			pygame.Surface.blit(screen, surf, adjusted_rect)
 
-	# def draw_ai_move(self, edge):
-	# 	if edge == 'l':
-	# 		self.left_edge = True
-	# 		dots.add(Dot(self.rect.left, self.rect.top))
-	# 		dots.add(Dot(self.rect.left, self.rect.bottom))
-	# 		self.check_occupied()
-	# 	elif edge == 'r':
-	# 		self.right_edge = True
-	# 		dots.add(Dot(self.rect.right, self.rect.top))
-	# 		dots.add(Dot(self.rect.right, self.rect.bottom))
-	# 		self.check_occupied()
-	# 	elif edge == 'b':
-	# 		self.bottom_edge = True
-	# 		dots.add(Dot(self.rect.left, self.rect.bottom))
-	# 		dots.add(Dot(self.rect.right, self.rect.bottom))
-	# 		self.check_occupied()
-	# 	elif edge == 't':
-	# 		self.top_edge = True
-	# 		dots.add(Dot(self.rect.left, self.rect.top))
-	# 		dots.add(Dot(self.rect.right, self.rect.top))
-	# 		self.check_occupied()
-
 rects = []
 for i in range(side, board.width, side):
 	for j in range(side, board.height, side):
@@ -199,22 +175,27 @@ def is_feasible(past_state, future_state):
 	Return weight of decision based on a definite scale.
 	Calculates all the squares that can be possibly occupied because of a chain-reaction.
 	"""
-	weight = -10
+	weight = 0
+	if future_state.count(3) > past_state.count(3):
+		if future_state.count(4) == past_state.count(4):
+			weight -= 10
+		else:
+			weight += 20
 	for index, filled_edges in enumerate(past_state):
 		# start checks only if there's a change
 		future_edges = future_state[index]
 		if future_edges != filled_edges:
 			# dont help the player
 			if filled_edges == 2 and future_edges == 3:
-				weight = max(weight, -1)
+				weight -= 10
 			# good if you occupied a square
 			if filled_edges == 3 and future_edges == 4:
-				weight = max(weight, 10)
+				weight += 10
 			# safe moves
 			if filled_edges == 1 and future_edges == 2:
-				weight = max(weight, 1)
+				weight += 1
 			if filled_edges == 0 and future_edges == 1:
-				weight = max(weight, 5)
+				weight += 5
 	return weight
 
 def apply_move(move):
@@ -293,9 +274,18 @@ def ai_move():
 	for move in possible_moves:
 		final_state = apply_move(move)
 		possible_decisions.append(is_feasible(initial_state, final_state))
-	print possible_decisions
-	print possible_moves[possible_decisions.index(max(possible_decisions))]
-	return possible_moves[possible_decisions.index(max(possible_decisions))]
+	# print possible_decisions
+	# randomizing when some decisions have the same weight
+	max_weight = max(possible_decisions)
+	# list of indices which have the same weight
+	max_indices = []
+	for index, weight in enumerate(possible_decisions):
+		if weight == max_weight:
+			max_indices.append(index)
+	x = choice(max_indices)
+	print x
+	return possible_moves[x]
+	# return possible_moves[possible_decisions.index(max(possible_decisions))]
 
 def convert_to_stack(move):
 	stack = []
