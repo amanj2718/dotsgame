@@ -8,7 +8,7 @@ pygame.init()
 
 side = 50
 dimensions = [550, 550]
-board = Rect(side, side, 3*side, 3*side)
+board = Rect(side, side, 5*side, 5*side)
 
 window = pygame.display.set_mode(dimensions)
 
@@ -165,7 +165,9 @@ def draw_background():
 	for top, bottom in zip(top_border, bottom_border):
 		pygame.draw.line(window, BLACK, top, bottom, 2)
 		pygame.draw.line(window, BLACK, list(reversed(top)), list(reversed(bottom)), 2)
-
+"""
+AI SYSTEM
+"""
 def get_filled_edges(rect):
 	edges = [rect.left_edge, rect.top_edge, rect.right_edge, rect.bottom_edge]
 	return edges.count(True)
@@ -176,11 +178,6 @@ def is_feasible(past_state, future_state):
 	Calculates all the squares that can be possibly occupied because of a chain-reaction.
 	"""
 	weight = 0
-	if future_state.count(3) > past_state.count(3):
-		if future_state.count(4) == past_state.count(4):
-			weight -= 10
-		else:
-			weight += 20
 	for index, filled_edges in enumerate(past_state):
 		# start checks only if there's a change
 		future_edges = future_state[index]
@@ -196,6 +193,9 @@ def is_feasible(past_state, future_state):
 				weight += 1
 			if filled_edges == 0 and future_edges == 1:
 				weight += 5
+	if future_state.count(3) > past_state.count(3):
+		print 'happened'
+		weight -= 10
 	return weight
 
 def apply_move(move):
@@ -274,7 +274,7 @@ def ai_move():
 	for move in possible_moves:
 		final_state = apply_move(move)
 		possible_decisions.append(is_feasible(initial_state, final_state))
-	# print possible_decisions
+	print possible_decisions
 	# randomizing when some decisions have the same weight
 	max_weight = max(possible_decisions)
 	# list of indices which have the same weight
@@ -308,7 +308,9 @@ def convert_to_stack(move):
 	stack.append(d1)
 	stack.append(d2)
 	return stack
-
+"""
+AI SYSTEM END
+"""
 def set_game_mode():
 	global MODE
 	ai_text = font.render("AI MODE", 0, RED)
