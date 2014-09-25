@@ -23,8 +23,9 @@ BLUE = (0, 0, 255, 1)
 player1_points = 0
 player2_points = 0
 turn_stack = []
-states = {'p1fd':0, 'p1sd':1, 'p2fd':2, 'p2sd':3}
-curr_state = states['p1fd']
+MODE = 'MULTIPLAYER'
+STATES = {'p1fd':0, 'p1sd':1, 'p2fd':2, 'p2sd':3}
+curr_state = STATES['p1fd']
 game_log = ["Player 1 --\n"]
 
 class Dot(pygame.sprite.Sprite):
@@ -86,10 +87,12 @@ class Square():
 	def check_occupied(self):
 		if self.right_edge == True and self.left_edge == True \
 		and self.top_edge == True and self.bottom_edge == True:
-			if curr_state == states['p1sd']:
+			if curr_state == STATES['p1sd']:
 				self.occupied = 1
-			if curr_state == states['p2sd']:
+			if curr_state == STATES['p2sd']:
 				self.occupied = 2
+			if MODE == 'AI_MODE' and curr_state == STATES['p2fd']:
+				self.occupied = 3
 		else:
 			self.occupied = False
 
@@ -108,12 +111,26 @@ class Square():
 			adjusted_rect = Rect(self.rect.topleft[0] + 3, self.rect.topleft[1] + 3,
 								 self.rect.width - 3, self.rect.height - 3)
 			pygame.Surface.blit(screen, surf, adjusted_rect)
-		elif self.occupied == 2:
+		elif self.occupied == 2 or self.occupied == 3:
 			surf = pygame.Surface((self.rect.width, self.rect.height))
 			surf.fill(BLUE)
 			adjusted_rect = Rect(self.rect.topleft[0] + 3, self.rect.topleft[1] + 3,
 								 self.rect.width - 3, self.rect.height - 3)
 			pygame.Surface.blit(screen, surf, adjusted_rect)
+
+	def draw_ai_move(self, edge):
+		if edge == 'l':
+			self.left_edge = True
+			self.check_occupied()
+		elif edge == 'r':
+			self.right_edge = True
+			self.check_occupied()
+		elif edge == 'b':
+			self.bottom_edge = True
+			self.check_occupied()
+		elif edge == 't':
+			self.top_edge = True
+			self.check_occupied()
 
 rects = []
 for i in range(side, board.width, side):
@@ -144,11 +161,11 @@ def clear_turn_stack():
 	dots.remove(terminal)
 
 def render_ui():
-	if curr_state == states['p1fd'] or curr_state == states['p1sd']:
+	if curr_state == STATES['p1fd'] or curr_state == STATES['p1sd']:
 		status = font.render("Player 1\'s turn", 0, RED)
 		pygame.Surface.blit(window, status, Rect(200, 25, status.get_width(), status.get_height()))
 
-	elif curr_state == states['p2fd'] or curr_state == states['p2sd']:
+	elif curr_state == STATES['p2fd'] or curr_state == STATES['p2sd']:
 		status = font.render("Player 2\'s turn", 0, RED)
 		pygame.Surface.blit(window, status, Rect(200, 25, status.get_width(), status.get_height()))
 	
@@ -174,7 +191,23 @@ def is_feasible(past_state, future_state):
 	Return weight of decision based on a definite scale.
 	Calculates all the squares that can be possibly occupied because of a chain-reaction.
 	"""
-	pass
+	weight = -10
+	for index, filled_edges in enumerate(past_state):
+		# start checks only if there's a change
+		future_edges = future_state[index]
+		if future_edges != filled_edges:
+			# dont help the player
+			if filled_edges == 2 and future_edges == 3:
+				weight = max(weight, -1)
+			# good if you occupied a square
+			if filled_edges == 3 and future_edges == 4:
+				weight = max(weight, 10)
+			# safe moves
+			if filled_edges == 1 and future_edges == 2:
+				weight = max(weight, 1)
+			if filled_edges == 0 and future_edges == 1:
+				weight = max(weight, 5)
+	return weight
 
 def apply_move(move):
 	"""
@@ -252,32 +285,59 @@ def ai_move():
 	for move in possible_moves:
 		final_state = apply_move(move)
 		possible_decisions.append(is_feasible(initial_state, final_state))
+	print possible_decisions
+	print possible_moves[possible_decisions.index(max(possible_decisions))]
 	return possible_moves[possible_decisions.index(max(possible_decisions))]
 
+def set_game_mode():
+	global MODE
+	ai_text = font.render("AI MODE", 0, RED)
+	ai_rect = Rect(225, 150, ai_text.get_width(), ai_text.get_height())
+	two_player = font.render("2 PLAYER", 0, RED)
+	two_player_rect = Rect(225, 275, two_player.get_width(), two_player.get_height())
+	done = False
+	while not done:
+		for event in pygame.event.get():
+			if (event.type == KEYDOWN and event.key == K_ESCAPE) \
+			or event.type == pygame.QUIT:
+				sys.exit()
+			if (event.type == MOUSEBUTTONDOWN and event.button == 1):
+				if ai_rect.collidepoint((event.pos[0], event.pos[1])):
+					MODE = 'AI_MODE'
+					done = True
+				elif two_player_rect.collidepoint((event.pos[0], event.pos[1])):
+					MODE = 'MULTIPLAYER'
+					done = True
+		window.fill(BLACK)
+		pygame.Surface.blit(window, ai_text, ai_rect)
+		pygame.Surface.blit(window, two_player, two_player_rect)
+		pygame.display.flip()
+
+set_game_mode()
 # game loop
 while True:
 	for event in pygame.event.get():
-		if (event.type == KEYDOWN and event.key == K_ESCAPE) or event.type == pygame.QUIT:
+		if (event.type == KEYDOWN and event.key == K_ESCAPE) \
+		or event.type == pygame.QUIT:
 			sys.exit()
 		# handle mouse clicks
 		if event.type == MOUSEBUTTONDOWN and event.button == 1:
 			snapped = is_clickable(event.pos[0], event.pos[1])
 			if snapped is not (-50, -50):
 				# gameplay logic
-				if curr_state == states['p1fd']:
+				if curr_state == STATES['p1fd']:
 					d = Dot(snapped[0], snapped[1])
 					dots.add(d)
 					turn_stack.append(d)
-					curr_state = states['p1sd']
+					curr_state = STATES['p1sd']
 
-				elif curr_state == states['p2fd']:
-					ai_move()
+				elif curr_state == STATES['p2fd'] and MODE == 'MULTIPLAYER':
 					d = Dot(snapped[0], snapped[1])
 					dots.add(d)
 					turn_stack.append(d)
-					curr_state = states['p2sd']
+					curr_state = STATES['p2sd']
 
-				elif curr_state == states['p1sd']:
+				elif curr_state == STATES['p1sd']:
 					d = Dot(snapped[0], snapped[1])
 					if d.pos != turn_stack[0].pos:
 						dots.add(d)
@@ -287,16 +347,16 @@ while True:
 							result_list = map(lambda r: r.update(turn_stack), rects)
 							if any(result_list):
 								player1_points += result_list.count(1)
-								curr_state = states['p1fd']
+								curr_state = STATES['p1fd']
 							else:
-								curr_state = states['p2fd']
+								curr_state = STATES['p2fd']
 						# if dots are not adjacent
 						else:
 							clear_turn_stack()
-							curr_state = states['p1fd']
+							curr_state = STATES['p1fd']
 						turn_stack = []
 
-				elif curr_state == states['p2sd']:
+				elif curr_state == STATES['p2sd'] and MODE == 'MULTIPLAYER':
 					d = Dot(snapped[0], snapped[1])
 					if d.pos != turn_stack[0].pos:
 						dots.add(d)
@@ -305,13 +365,19 @@ while True:
 							result_list = map(lambda r: r.update(turn_stack), rects)
 							if any(result_list):
 								player2_points += result_list.count(2)
-								curr_state = states['p2fd']
+								curr_state = STATES['p2fd']
 							else:
-								curr_state = states['p1fd']
+								curr_state = STATES['p1fd']
 						else:
 							clear_turn_stack()
-							curr_state = states['p2fd']
+							curr_state = STATES['p2fd']
 						turn_stack = []
+
+	if MODE == 'AI_MODE' and curr_state == STATES['p2fd']:
+		move = ai_move()
+		rects[move[0]].draw_ai_move(move[1])
+		curr_state = STATES['p1fd']
+
 	# background
 	draw_background()
 
