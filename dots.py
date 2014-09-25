@@ -38,8 +38,8 @@ class Dot(pygame.sprite.Sprite):
 		self.pos = (self.x, self.y)
 
 	def is_adjacent(self, other):
-		if (abs(self.x - other.x) == side or abs(self.y - other.y) == side) and not \
-			(abs(self.x - other.x) == side and abs(self.y - other.y) == side):
+		if (abs(self.x - other.x) == side or abs(self.y - other.y) == side) \
+		and not (abs(self.x - other.x) == side and abs(self.y - other.y) == side):
 			return True
 		else:
 			return False
@@ -84,7 +84,8 @@ class Square():
 		return False
 
 	def check_occupied(self):
-		if self.right_edge == True and self.left_edge == True and self.top_edge == True and self.bottom_edge == True:
+		if self.right_edge == True and self.left_edge == True \
+		and self.top_edge == True and self.bottom_edge == True:
 			if curr_state == states['p1sd']:
 				self.occupied = 1
 			if curr_state == states['p2sd']:
@@ -104,12 +105,14 @@ class Square():
 		if self.occupied == 1:
 			surf = pygame.Surface((self.rect.width, self.rect.height))
 			surf.fill(GREEN)
-			adjusted_rect = Rect(self.rect.topleft[0] + 3, self.rect.topleft[1] + 3, self.rect.width - 3, self.rect.height - 3)
+			adjusted_rect = Rect(self.rect.topleft[0] + 3, self.rect.topleft[1] + 3,
+								 self.rect.width - 3, self.rect.height - 3)
 			pygame.Surface.blit(screen, surf, adjusted_rect)
 		elif self.occupied == 2:
 			surf = pygame.Surface((self.rect.width, self.rect.height))
 			surf.fill(BLUE)
-			adjusted_rect = Rect(self.rect.topleft[0] + 3, self.rect.topleft[1] + 3, self.rect.width - 3, self.rect.height - 3)
+			adjusted_rect = Rect(self.rect.topleft[0] + 3, self.rect.topleft[1] + 3,
+								 self.rect.width - 3, self.rect.height - 3)
 			pygame.Surface.blit(screen, surf, adjusted_rect)
 
 rects = []
@@ -144,7 +147,7 @@ def render_ui():
 	if curr_state == states['p1fd'] or curr_state == states['p1sd']:
 		status = font.render("Player 1\'s turn", 0, RED)
 		pygame.Surface.blit(window, status, Rect(200, 25, status.get_width(), status.get_height()))
-	
+
 	elif curr_state == states['p2fd'] or curr_state == states['p2sd']:
 		status = font.render("Player 2\'s turn", 0, RED)
 		pygame.Surface.blit(window, status, Rect(200, 25, status.get_width(), status.get_height()))
@@ -230,7 +233,8 @@ def three_filled_edge(index):
 def ai_move():
 	"""
 	Returns a tuple (index_in_rects, edge_code).
-	edge_codes: left_edge -- 'l', top_edge -- 't', right_edge -- 'r', bottom_edge -- 'b'
+	edge_codes: left_edge -- 'l', top_edge -- 't', 
+				right_edge -- 'r', bottom_edge -- 'b'
 	"""
 	initial_state = map(get_filled_edges, rects)
 	possible_moves = []
@@ -324,7 +328,8 @@ while True:
 	if all(lst):
 		while True:
 			for event in pygame.event.get():
-				if (event.type == KEYDOWN and event.key == K_ESCAPE) or event.type == pygame.QUIT:
+				if (event.type == KEYDOWN and event.key == K_ESCAPE) \
+				or event.type == pygame.QUIT:
 					sys.exit()
 			window.fill(WHITE, Rect(0, 0, 550, 43))
 			if lst.count(1) > lst.count(2):
