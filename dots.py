@@ -2,7 +2,7 @@ import pygame, sys
 from pygame.locals import *
 from copy import deepcopy
 from random import choice
-
+from math import sqrt
 
 pygame.init()
 
@@ -194,7 +194,6 @@ def is_feasible(past_state, future_state):
 			if filled_edges == 0 and future_edges == 1:
 				weight += 5
 	if future_state.count(3) > past_state.count(3):
-		print 'happened'
 		weight -= 10
 	return weight
 
@@ -205,14 +204,23 @@ def apply_move(move):
 	rects_copy = deepcopy(rects)
 	rect_index = move[0]
 	rect_edge = move[1]
+	offset = int(sqrt(len(rects)))
 	if rect_edge == 'l':
 		rects_copy[rect_index].left_edge = True
+		if rect_index - offset >= 0:
+			rects_copy[rect_index - offset].right_edge = True
 	elif rect_edge == 'r':
 		rects_copy[rect_index].right_edge = True
+		if rect_index + offset <= 8:
+			rects_copy[rect_index + offset].left_edge = True
 	elif rect_edge == 't':
 		rects_copy[rect_index].top_edge = True
+		if rect_index%offset != 0:
+			rects_copy[rect_index - 1].bottom_edge = True
 	elif rect_edge == 'b':
 		rects_copy[rect_index].bottom_edge = True
+		if rect_index%offset != offset - 1:
+			rects_copy[rect_index + 1].top_edge = True
 	return map(get_filled_edges, rects_copy)
 
 def one_filled_edge(index):
